@@ -270,7 +270,20 @@ Logic:      Create(Me, Theory);
             alert('有効なフォーマットが見つかりませんでした。');
         }
     }
+// 保存用：ブラウザのストレージに現在の辞書を書き込む
+function saveToStorage() {
+    localStorage.setItem('m_cyrillic_dict', JSON.stringify(dictionary));
+}
 
+// 読込用：ページを開いた時に保存された辞書を呼び出す
+function loadFromStorage() {
+    const saved = localStorage.getItem('m_cyrillic_dict');
+    if (saved) {
+        dictionary = JSON.parse(saved);
+        refreshUI();
+    }
+}
+    
     function addWord() {
         const type = document.getElementById('new-type').value;
         const root = document.getElementById('new-root').value.trim();
@@ -307,4 +320,5 @@ Logic:      Create(Me, Theory);
     refreshUI();
 </script>
 </body>
+
 </html>

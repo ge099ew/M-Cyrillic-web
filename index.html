@@ -214,7 +214,147 @@ Logic:      Create(Me, Theory);
         </section>
     </main>
 </div>
+ <section class="section">
+     <h2>データ追加</h2>
+     <select id="new-type">
+                    <option value="verb">動詞 (関数)</option>
+                    <option value="noun">名詞 (変数)</option>
+                    <option value="adj">形容詞 (属性)</option>
+                    <option value="adv">副詞 (様態)</option>
+                    <option value="conj">接続詞 (論理)</option>
+                </select>
+                <input type="text" id="new-root" placeholder="語根 (キリル文字)" style="margin-top:5px;">
+                <input type="text" id="new-mean" placeholder="意味 (日本語)" style="margin-top:5px;">
+                <button onclick="addWord()">登録</button>
+                <hr style="border:0; border-top:1px solid var(--border); margin:15px 0;">
+                <h3>一括インポート</h3>
+                <textarea id="bulk-input" style="height: 80px;" placeholder="種類：形容詞 語根：Ю | 意味：美しい"></textarea>
+                <button onclick="bulkImport()" style="background:var(--success); color:white;">一括実行</button>
+                <button onclick="clearStorage()" style="background:none; color:var(--danger); border:1px solid var(--danger); font-size:0.7rem; margin-top:20px;">[ 全データを初期化 ]</button>
+            </section>
+        </div>
+    </main>
+</div>
 
+<script>
+    // --- 記憶プロトコル (Storage Engine) ---
+    const STORAGE_KEY = 'm_cyrillic_v3_final';
+    
+    const defaultDict = {
+        verbs: [{id:1, root:"Скан", mean:"解析"}, {id:2, root:"Либ", mean:"好き"}],
+        nouns: [{id:3, root:"Наблю", mean:"先生"}, {id:4, root:"Сист", mean:"システム"}],
+        adjs: [{id:5, root:"Ю", mean:"美しい"}],
+        advs: [{id:6, root:"全", mean:"完全に"}],
+        conjs: [{id:7, root:"Иф", mean:"もし"}]
+    };
+
+    // 起動時にストレージを確認
+    let dictionary = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultDict;
+
+    function save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dictionary));
+        document.getElementById('save-status').innerText = "● Storage Saved: " + new Date().toLocaleTimeString();
+    }
+
+    function refreshUI() {
+        const tbody = document.getElementById('dict-body');
+        tbody.innerHTML = '';
+        const types = { verb:'動', noun:'名', adj:'形', adv:'副', conj:'接' };
+        const colors = { verb:'#d2a8ff', noun:'#7ee787', adj:'#ff7b72', adv:'#d29922', conj:'#a5d6ff' };
+        
+        Object.keys(types).forEach(key => {
+            const list = dictionary[key+'s'] || [];
+            list.forEach(item => {
+                tbody.innerHTML += `<tr>
+                    <td><span class="badge" style="color:${colors[key]}">${types[key]}</span></td>
+                    <td style="font-family:monospace;"><b>${item.root}</b></td><td>${item.mean}</td>
+                    <td><button onclick="deleteWord('${key}', ${item.id})" style="padding:2px 5px; font-size:0.6rem; background:none; color:var(--danger); border:1px solid var(--danger); cursor:pointer;">削除</button></td>
+                </tr>`;
+            });
+        });
+        save(); // UI更新のたびに保存
+    }
+
+    // --- 実行プロトコル ---
+    function addWord() {
+        const type = document.getElementById('new-type').value;
+        const root = document.getElementById('new-root').value.trim();
+        const mean = document.getElementById('new-mean').value.trim();
+        if(root && mean) {
+            if(!dictionary[type+'s']) dictionary[type+'s'] = [];
+            dictionary[type+'s'].push({id: Date.now(), root: root, mean: mean});
+            document.getElementById('new-root').value = '';
+            document.getElementById('new-mean').value = '';
+            refreshUI(); autoTranslate();
+        }
+    }
+
+    function deleteWord(type, id) {
+        dictionary[type+'s'] = dictionary[type+'s'].filter(x => x.id !== id);
+        refreshUI(); autoTranslate();
+    }
+
+    function bulkImport() {
+        const text = document.getElementById('bulk-input').value;
+        const lines = text.split('\n');
+        lines.forEach(line => {
+            const r = line.match(/語根[:：]\s*([^\s\|]+)/);
+            const m = line.match(/意味[:：]\s*([^\s\n]+)/);
+            const t = line.match(/種類[:：]\s*(動詞|名詞|形容詞|副詞|接続詞)/);
+            if(r && m && t) {
+                const typeMap = { '動詞':'verb', '名詞':'noun', '形容詞':'adj', '副詞':'adv', '接続詞':'conj' };
+                const key = typeMap[t[1]];
+                if(!dictionary[key+'s']) dictionary[key+'s'] = [];
+                dictionary[key+'s'].push({id: Date.now() + Math.random(), root: r[1], mean: m[1]});
+            }
+        });
+        document.getElementById('bulk-input').value = '';
+        refreshUI(); autoTranslate();
+    }
+
+    function clearStorage() {
+        if(confirm("全ての単語データを消去して初期化しますか？")) {
+            localStorage.removeItem(STORAGE_KEY);
+            location.reload();
+        }
+    }
+
+    function autoTranslate() {
+        const input = document.getElementById('jp-input').value;
+        if(!input) { document.getElementById('m-output').innerText = "// STANDBY"; return; }
+
+        let v="", s="", o="", adj="", adv="", conj="", t="т", prefix="";
+
+        if(input.includes("？")) prefix = "Ли-";
+        
+        // 各カテゴリをスキャン
+        (dictionary.nouns || []).forEach(n => {
+            if(input.includes(n.mean+"が") || input.includes(n.mean+"は")) s = n.root + "а";
+            if(input.includes(n.mean+"を") || input.includes(n.mean+"に")) o = n.root + "он";
+        });
+        (dictionary.verbs || []).forEach(ver => { if(input.includes(ver.mean)) v = ver.root; });
+        (dictionary.adjs || []).forEach(a => { if(input.includes(a.mean)) adj = a.root + "и "; });
+        (dictionary.advs || []).forEach(a => { if(input.includes(a.mean)) adv = a.root + "о "; });
+        (dictionary.conjs || []).forEach(c => { if(input.includes(c.mean)) conj = c.root + " "; });
+
+        if(input.includes("もし") || input.includes("なら")) {
+            t = "ы"; if(!conj) conj = "Иф ";
+        } else if(input.includes("だろう")) {
+            t = "м";
+        }
+
+        if(v && s && o) {
+            let res = `${conj}${prefix}${v}${t} ${adv}${s} ${adj}${o}.`;
+            document.getElementById('m-output').innerText = res.trim();
+            document.getElementById('log').innerText = `論理構築：完了`;
+        } else {
+            document.getElementById('m-output').innerText = "...要素待機中";
+        }
+    }
+
+    // 初期化実行
+    refreshUI();
+</script>
 <script>
     let dictionary = {
         verbs: [{ id: 1, root: "Ген", mean: "生成" }],
@@ -322,3 +462,4 @@ function loadFromStorage() {
 </body>
 
 </html>
+

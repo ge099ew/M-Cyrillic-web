@@ -195,7 +195,13 @@ Logic:      Create(Me, Theory);
                     </table>
                 </div>
                 <h3 style="margin-top:20px;">個別登録</h3>
-                    <select id="new-type"><option value="verb">動詞</option><option value="noun">名詞</option></select>
+                    <select id="new-type">
+                        <option value="verb">動詞 (関数)</option>
+                        <option value="noun">名詞 (変数)</option>
+                        <option value="adj">形容詞 (属性)</option>
+                        <option value="adv">副詞 (様態)</option>
+                        p<option value="conj">接続詞 (論理)</option>
+                    </select>
                     <input type="text" id="new-root" placeholder="語根 (Cyrillic)" style="margin-top:5px;">
                     <input type="text" id="new-mean" placeholder="意味 (日本語)" style="margin-top:5px;">
                     <button onclick="addWord()">個別追加</button>
@@ -206,32 +212,14 @@ Logic:      Create(Me, Theory);
                         <label style="font-size: 0.75rem; color: var(--secondary);">貼り付け例：種類：名詞 語根：Брот | 意味：パン</label>
                         <textarea id="bulk-input" style="height: 120px; margin-top: 5px;" placeholder="ここにコピー＆ペースト..."></textarea>
                         <button onclick="bulkImport()" style="background: var(--success); color: white;">一括インポート実行</button>
+                        <button onclick="clearStorage()" style="background:none; color:var(--danger); border:1px solid var(--danger); font-size:0.7rem; margin-top:20px;">[ 全データを初期化 ]</button>
                     </div>
 
                     <button onclick="addWord()">データベースを更新</button>
                 </div>
-            </div>
         </section>
     </main>
 </div>
- <section class="section">
-     <h2>データ追加</h2>
-     <select id="new-type">
-                    <option value="verb">動詞 (関数)</option>
-                    <option value="noun">名詞 (変数)</option>
-                    <option value="adj">形容詞 (属性)</option>
-                    <option value="adv">副詞 (様態)</option>
-                    <option value="conj">接続詞 (論理)</option>
-                </select>
-                <input type="text" id="new-root" placeholder="語根 (キリル文字)" style="margin-top:5px;">
-                <input type="text" id="new-mean" placeholder="意味 (日本語)" style="margin-top:5px;">
-                <button onclick="addWord()">登録</button>
-                <hr style="border:0; border-top:1px solid var(--border); margin:15px 0;">
-                <h3>一括インポート</h3>
-                <textarea id="bulk-input" style="height: 80px;" placeholder="種類：形容詞 語根：Ю | 意味：美しい"></textarea>
-                <button onclick="bulkImport()" style="background:var(--success); color:white;">一括実行</button>
-                <button onclick="clearStorage()" style="background:none; color:var(--danger); border:1px solid var(--danger); font-size:0.7rem; margin-top:20px;">[ 全データを初期化 ]</button>
-            </section>
         </div>
     </main>
 </div>
@@ -355,6 +343,7 @@ Logic:      Create(Me, Theory);
     // 初期化実行
     refreshUI();
 </script>
+    
 <script>
     let dictionary = {
         verbs: [{ id: 1, root: "Ген", mean: "生成" }],
@@ -462,4 +451,5 @@ function loadFromStorage() {
 </body>
 
 </html>
+
 

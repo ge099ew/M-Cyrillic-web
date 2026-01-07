@@ -64,6 +64,7 @@
             </ul>
         </nav>
     </aside>
+</div>
 
     <main class="main-content">
         <section id="overview" class="section">
@@ -218,12 +219,8 @@ Logic:      Create(Me, Theory);
                     <button onclick="addWord()">データベースを更新</button>
                 </div>
         </section>
-    </main>
-</div>
-        </div>
-</div>
-    
-<script>
+        
+        <script>
     // 起動時にストレージを確認
     let dictionary = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultDict;
 
@@ -355,9 +352,11 @@ function loadFromStorage() {
     refreshUI();
     
 </script>
+    
 </body>
 
 </html>
+
 
 
 

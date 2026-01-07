@@ -122,44 +122,37 @@
         </section>
 
         <section id="translator" class="section" style="border: 1px solid var(--accent);">
-            <h2>論理演算ターミナル (Translate)</h2>
-            <p style="font-size:0.8rem; color:var(--secondary);">日本語を入力してください。論理構造（If文、疑問文、過去形など）を自動解析します。</p>
-            <textarea id="jp-input" placeholder="例：私は毎朝ご飯を食べる" oninput="autoTranslate()"></textarea>
+            <h2>論理演算ターミナル</h2>
+            <textarea id="jp-input" placeholder="例：おはよう。私は美しい。先生のシステムを解析したい。" oninput="autoTranslate()"></textarea>
             <div class="trans-display" id="m-output">// STANDBY</div>
             <div id="log" style="font-size: 0.75rem; color: var(--secondary); margin-top: 10px; font-family: monospace;"></div>
         </section>
 
         <section id="dictionary" class="section">
-            <h2>辞書データベース & ストレージ管理</h2>
-            <div class="tool-grid">
-                <div style="max-height: 500px; overflow-y: auto; border: 1px solid var(--border);">
+            <h2>辞書データベース</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <div style="max-height: 400px; overflow-y: auto;">
                     <table>
-                        <thead><tr><th>種別</th><th>語根 (Кур)</th><th>意味</th><th>操作</th></tr></thead>
+                        <thead><tr><th>種別</th><th>語根</th><th>意味</th><th>操作</th></tr></thead>
                         <tbody id="dict-body"></tbody>
                     </table>
                 </div>
-
                 <div>
-                    <h3>個別データ登録</h3>
+                    <h3>新規データ登録</h3>
                     <select id="new-type">
+                        <option value="intj">感嘆詞 (Signal)</option>
+                        <option value="aux">助動詞 (Aux)</option>
                         <option value="verb">動詞 (Action)</option>
                         <option value="noun">名詞 (Entity)</option>
-                        <option value="adj">形容詞 (Attribute)</option>
-                        <option value="adv">副詞 (Modifier)</option>
-                        <option value="conj">接続詞 (Logic)</option>
+                        <option value="adj">形容詞 (Attr)</option>
+                        <option value="adv">副詞 (Mod)</option>
                     </select>
-                    <input type="text" id="new-root" placeholder="語根 (キリル文字表記)">
-                    <input type="text" id="new-mean" placeholder="意味 (日本語)">
-                    <button onclick="addWord()">データベースに追加</button>
-
+                    <input type="text" id="new-root" placeholder="語根">
+                    <input type="text" id="new-mean" placeholder="意味">
+                    <button onclick="addWord()">登録</button>
                     <h3 style="margin-top:20px;">一括インポート</h3>
-                    <div class="import-area">
-                        <label style="font-size: 0.75rem; color: var(--secondary);">例：種類：形容詞 語根：Ю | 意味：美しい</label>
-                        <textarea id="bulk-input" style="height: 100px; margin-top: 5px;" placeholder="ここにリストを貼り付け..."></textarea>
-                        <button onclick="bulkImport()" style="background: var(--success); color: white;">一括インポート実行</button>
-                    </div>
-                    
-                    <button class="btn-reset" onclick="clearStorage()" style="margin-top:30px;">[注意] 全データを初期化</button>
+                    <textarea id="bulk-input" style="height: 80px;" placeholder="種類：感嘆詞 語根：Оха | 意味：おはよう"></textarea>
+                    <button onclick="bulkImport()" style="background:var(--success); color:white;">実行</button>
                 </div>
             </div>
         </section>
@@ -167,45 +160,23 @@
 </div>
 
 <script>
-    // --- 1. ストレージ & 初期データ定義 ---
-    const STORAGE_KEY = 'm_cyrillic_v3_5_data';
-    
-    // デフォルト辞書（初回起動時のみ使用）
+    const STORAGE_KEY = 'm_cyrillic_v3_8_data';
     const defaultDict = {
-        verbs: [
-            {id:1, root:"Ген", mean:"生成"}, {id:2, root:"Скан", mean:"解析"},
-            {id:3, root:"Либ", mean:"好き"}, {id:4, root:"Лог", mean:"記録"}
-        ],
-        nouns: [
-            {id:101, root:"Кляйн", mean:"私"}, {id:102, root:"Наблю", mean:"先生"},
-            {id:103, root:"Сист", mean:"システム"}, {id:104, root:"Ду", mean:"貴方"}
-        ],
-        adjs: [
-            {id:201, root:"Ю", mean:"美しい"}, {id:202, root:"Бри", mean:"速い"},
-            {id:203, root:"Гран", mean:"大きい"}
-        ],
-        advs: [
-            {id:301, root:"Зен", mean:"完全に"}, {id:302, root:"Сло", mean:"ゆっくり"}
-        ],
-        conjs: [
-            {id:401, root:"Иф", mean:"もし"}, {id:402, root:"Иф", mean:"なら"} // "なら"もLogic的にはIf
-        ]
+        verbs: [{id:1, root:"Ген", mean:"生成"}, {id:2, root:"Скан", mean:"解析"}, {id:3, root:"Эст", mean:"である"}],
+        nouns: [{id:101, root:"Кляйн", mean:"私"}, {id:102, root:"Наблю", mean:"先生"}],
+        adjs: [{id:201, root:"Ю", mean:"美しい"}],
+        advs: [], conjs: [], 
+        intjs: [{id:501, root:"Оха", mean:"おはよう"}, {id:502, root:"Я", mean:"はい"}],
+        auxs: [{id:601, root:"Кан", mean:"できる"}, {id:602, root:"Вол", mean:"したい"}]
     };
 
-    // ストレージから読み込み or デフォルト使用
     let dictionary = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultDict;
 
-    // --- 2. データ保存 & UI更新 ---
-    function save() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(dictionary));
-        const now = new Date();
-        document.getElementById('save-status').innerText = `● Auto-Save: ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-    }
+    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(dictionary)); }
 
     function refreshUI() {
         const tbody = document.getElementById('dict-body');
         tbody.innerHTML = '';
-        
         // 各カテゴリの定義と色設定
         const categories = [
             { key: 'verbs', label: '動', color: '#d2a8ff' }, // 紫
@@ -213,8 +184,9 @@
             { key: 'adjs', label: '形', color: '#ff7b72' },  // 赤
             { key: 'advs', label: '副', color: '#d29922' },  // 黃
             { key: 'conjs', label: '接', color: '#a5d6ff' }  // 青
+            ,{ key: 'auxs', label: '助', color: '#79c0ff' }  // 水
+            ,{ key: 'intjs', label: '感', color: '#ffab70' } // 橙
         ];
-
         categories.forEach(cat => {
             const list = dictionary[cat.key] || [];
             list.forEach(item => {
@@ -229,20 +201,11 @@
         save(); // 画面更新のたびに保存
     }
 
-    // --- 3. データ操作ロジック ---
     function addWord() {
-        const type = document.getElementById('new-type').value + 's'; // verbs, nouns...
+        const type = document.getElementById('new-type').value + 's';
         const root = document.getElementById('new-root').value.trim();
         const mean = document.getElementById('new-mean').value.trim();
-        
-        if(root && mean) {
-            if(!dictionary[type]) dictionary[type] = [];
-            dictionary[type].push({ id: Date.now(), root, mean });
-            document.getElementById('new-root').value = '';
-            document.getElementById('new-mean').value = '';
-            refreshUI();
-            autoTranslate();
-        }
+        if(root && mean) { dictionary[type].push({id: Date.now(), root, mean}); refreshUI(); autoTranslate(); }
     }
 
     function deleteWord(type, id) {
@@ -253,124 +216,66 @@
         }
     }
 
-    function clearStorage() {
-        if(confirm("警告：すべての辞書データを消去して初期状態に戻しますか？")) {
-            localStorage.removeItem(STORAGE_KEY);
-            location.reload();
-        }
-    }
-
     function bulkImport() {
-        const text = document.getElementById('bulk-input').value;
-        const lines = text.split('\n');
-        let count = 0;
-
-        lines.forEach(line => {
-            if(!line.trim()) return;
-            const typeMatch = line.match(/種類[:：]\s*(動詞|名詞|形容詞|副詞|接続詞)/);
-            const rootMatch = line.match(/語根[:：]\s*([^\s\|]+)/);
-            const meanMatch = line.match(/意味[:：]\s*([^\s\n]+)/);
-
-            if (typeMatch && rootMatch && meanMatch) {
-                const map = { '動詞':'verbs', '名詞':'nouns', '形容詞':'adjs', '副詞':'advs', '接続詞':'conjs' };
-                const key = map[typeMatch[1]];
-                if(key) {
-                    if(!dictionary[key]) dictionary[key] = [];
-                    dictionary[key].push({ id: Date.now() + Math.random(), root: rootMatch[1], mean: meanMatch[1] });
-                    count++;
-                }
+        const text = document.getElementById('bulk-input').value.split('\n');
+        text.forEach(line => {
+            const r = line.match(/語根[:：]\s*([^\s\|]+)/);
+            const m = line.match(/意味[:：]\s*([^\s\n]+)/);
+            const t = line.match(/種類[:：]\s*(動詞|名詞|形容詞|副詞|感嘆詞|助動詞)/);
+            if(r && m && t) {
+                const map = { '動詞':'verbs', '名詞':'nouns', '形容詞':'adjs', '副詞':'advs', '感嘆詞':'intjs', '助動詞':'auxs' };
+                dictionary[map[t[1]]].push({id: Date.now() + Math.random(), root: r[1], mean: m[1]});
             }
         });
-        
-        if(count > 0) {
-            alert(`${count}件 インポート完了`);
-            document.getElementById('bulk-input').value = '';
-            refreshUI();
-            autoTranslate();
-        }
+        refreshUI(); autoTranslate();
     }
 
-    // --- 4. 翻訳・論理構築エンジン (Core Logic) ---
     function autoTranslate() {
         const input = document.getElementById('jp-input').value;
         if(!input) { document.getElementById('m-output').innerText = "// STANDBY"; return; }
 
-        let v = "", s = "", o = "";     // 動詞, 主語, 目的語
-        let adj_s = "", adj_o = "";     // 形容詞
-        let adv = "";                   // 副詞
-        let conj = "";                  // 接続詞
-        let prefix = "";                // 接頭辞 (疑問など)
-        let tense = "т";                // 時制 (デフォルト:確定/過去)
-        let logicLog = [];              // ログ用
-
-        // A. 構文解析 (Syntax Parsing)
-        if(input.includes("？") || input.includes("?")) {
-            prefix = "Ли-";
-            logicLog.push("[Query Mode]");
-        }
-
-        // B. 条件分岐 (If Logic)
-        if(input.includes("もし") || input.includes("なら") || input.includes("if")) {
-            tense = "ы"; // 仮定相
-            if(!conj) conj = "Иф "; // もし接続詞が特定できなくてもIfを付与
-            logicLog.push("[Hypothetical Logic]");
-        } else if (input.includes("だろう") || input.includes("未来")) {
-            tense = "м"; // 未確定相
-            logicLog.push("[Future/Probabilistic]");
-        }
-
-        // C. 辞書スキャン (Lexical Scan)
+        let logicLog = [];
         
-        // 1. 接続詞
-        (dictionary.conjs || []).forEach(c => {
-            if(input.includes(c.mean)) conj = c.root + " ";
-        });
-
-        // 2. 副詞 (文全体 or 動詞修飾)
-        (dictionary.advs || []).forEach(a => {
-            if(input.includes(a.mean)) adv = a.root + "о "; // 接尾辞 -o
-        });
-
-        // 3. 名詞 (主語・目的語の判定)
-        (dictionary.nouns || []).forEach(n => {
-            // 日本語の助詞で判定
-            if(input.includes(n.mean + "が") || input.includes(n.mean + "は")) s = n.root + "а"; // 慣性格 -a
-            if(input.includes(n.mean + "を") || input.includes(n.mean + "に")) o = n.root + "он"; // 作用格 -on
-        });
-
-        // 4. 形容詞 (簡易ロジック: 入力文にある形容詞を検出)
-        // 本来は「どの名詞にかかるか」の構文解析が必要だが、ここでは検出した順に割り当てる簡易実装
-        (dictionary.adjs || []).forEach(a => {
-            if(input.includes(a.mean)) {
-                // 主語があり、まだ修飾がないなら主語につける、そうでなければ目的語につける
-                if(s && !adj_s) adj_s = a.root + "и ";
-                else if(o && !adj_o) adj_o = a.root + "и ";
-            }
-        });
-
-        // 5. 動詞
-        (dictionary.verbs || []).forEach(ver => {
-            if(input.includes(ver.mean)) v = ver.root;
-        });
-
-        // D. 組み立て (Assembly)
-        // [Conj] [Prefix-Verb-Tense] [Adv] [Adj-Subject] [Adj-Object]
-        if(v && s && o) {
-            // 語順: 接続詞 + (接頭辞+動詞+時制) + 副詞 + (形+主語) + (形+目的語)
-            let result = `${conj}${prefix}${v}${tense} ${adv}${adj_s}${s} ${adj_o}${o}.`;
-            document.getElementById('m-output').innerText = result;
-            
-            // ログ出力
-            let detail = `Func: ${prefix}${v}(${tense}) | Args: [${s}], [${o}]`;
-            if(adv) detail += ` | Mod: ${adv}`;
-            document.getElementById('log').innerText = `Logic Trace: ${logicLog.join(" ")} ${detail}`;
-        } else {
-            document.getElementById('m-output').innerText = "...解析中 (V, S, O 不足)";
-            document.getElementById('log').innerText = "主語、目的語、動詞の3要素が必要です。";
+        // 1. 感嘆詞（Signal）チェック：あれば即出力
+        let foundIntj = "";
+        (dictionary.intjs || []).forEach(i => { if(input.includes(i.mean)) foundIntj = i.root + "-с"; });
+        if(foundIntj) { 
+            document.getElementById('m-output').innerText = foundIntj; 
+            document.getElementById('log').innerText = "Signal Protocol: 独立定型文";
+            return; 
         }
+
+        // 2. 構文要素解析
+        let v="", s="", o="", n_of="", aux="", adj_s="", tense="т";
+
+        // 助動詞
+        (dictionary.auxs || []).forEach(a => { if(input.includes(a.mean)) aux = a.root + "-"; });
+        // 動詞
+        (dictionary.verbs || []).forEach(ver => { if(input.includes(ver.mean)) v = ver.root; });
+        // 名詞・助詞（格）
+        (dictionary.nouns || []).forEach(n => {
+            if(input.includes(n.mean + "は") || input.includes(n.mean + "が")) s = n.root + "а";
+            if(input.includes(n.mean + "を") || input.includes(n.mean + "に")) o = n.root + "он";
+            if(input.includes(n.mean + "の")) n_of = n.root + "е "; // 所有格 -e
+        });
+        // 形容詞
+        (dictionary.adjs || []).forEach(a => { if(input.includes(a.mean)) adj_s = a.root + "и "; });
+
+        // 3. 特殊ルール（AはBだ の対応）
+        if(!v && s && (input.includes("だ") || input.includes("です") || adj_s)) v = "Эст";
+
+        // 4. 出力生成（要素が欠けていても可能な限り出す）
+        let result = "";
+        if(v) result += `${aux}${v}${tense} `;
+        if(adj_s) result += adj_s;
+        if(n_of) result += n_of;
+        if(s) result += s;
+        if(o) result += " " + o;
+
+        document.getElementById('m-output').innerText = result.trim() ? result.trim() + "." : "...解析不能";
+        document.getElementById('log').innerText = `Elements: V[${v}] S[${s}] O[${o}] Aux[${aux}]`;
     }
 
-    // 初期化実行
     refreshUI();
 </script>
 </body>
